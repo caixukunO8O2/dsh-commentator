@@ -1,0 +1,19 @@
+# dsh-commentator bundle patch.
+#
+# Applied over the dsh-web-app layer. This bundle contributes ONE host row
+# (the plugin that listens to Agent / ToolRuntime events and buffers the
+# commentary events) and relies on its `dsh.client` manifest (package.json)
+# to load the browser half that renders the caption bar and the settings UI.
+#
+# A patch replaces the targeted row's whole `config`, so only additive
+# `insert` rows appear here (we never override an existing shipped row).
+
+- insert:
+    # Host half: subscribes to the structured Agent / ToolRuntime events
+    # (agent/status, tools/execute, tools/result, approval/request) and keeps a
+    # small ring buffer of minimal, privacy-safe commentary events. The browser
+    # half polls GET /dsh-commentator/poll?session=<id> (same origin) and the
+    # host filters to the requested session's agent tree. No model-visible tool,
+    # no prompt text, no session-log writes.
+    - id: dsh-commentator
+      name: 'dsh-commentator'
