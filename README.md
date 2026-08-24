@@ -50,13 +50,22 @@ API 依赖面（均已在本版本源码中核对）：
 
 ## 安装
 
-在 `~/.dsh/profiles/web/`（你的 Web profile）下：
+在 `~/.dsh/profiles/web/`（你的 Web profile）下安装本插件：
+
+**方式 A：从 GitHub 安装**
 
 ```bash
-pnpm add dsh-commentator
+pnpm add github:caixukunO8O2/dsh-commentator
 ```
 
-然后把 bundle 行追加到 profile 的 `cordis.patch.yml`：
+**方式 B：本地目录安装（先克隆/下载本仓库）**
+
+```bash
+pnpm add <dsh-commentator 仓库路径>
+```
+
+然后确认 profile 的 `cordis.patch.yml` 里有 bundle 行（从 GitHub/本地安装时，若
+`dsh.bundle.patch` 未被 profile 自动拾取，手动追加）：
 
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
