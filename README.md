@@ -38,13 +38,19 @@ API 依赖面（均已在本版本源码中核对）：
 - 修改或创建文件（`write`/`edit`）时显示解说
 - 等待用户批准时显示解说
 - 工具执行成功 / 失败时显示解说
+- **连击 / 连败播报**：连续 3/5/8 次成功、连续 2/4 次失败时播报里程碑
+- **思考计时吐槽**：Agent 思考超过 12 秒才动手时追加一句"思考过久"解说
+- **子代理登场 / 退场**：监听 `subagent/start` / `subagent/end`，区分完成/出错
 - 整个任务完成时显示庆祝解说
+- **自定义人物卡**：预设「疾风 🎤 / 自然探员 🦉 / 冷淡 🖥️」，或自建人物
+  （起名、选表情、选基础文案风格、填个性口头禅与任务完成台词），字幕标签显示
+  `{表情} {名字}`，口头禅随机穿插
 - 字幕显示在页面**右下角**（悬浮层，`pointer-events: none`），不遮挡输入框、
   审批按钮或主要内容；每条字幕显示约 2~4 秒后平滑消失
-- 高频事件自动节流（低/中/高三档频率），不会刷屏
+- 高频事件自动节流（低/中/高三档频率），不会刷屏；成功/失败/完成字幕带左侧状态色条
 - 同类型事件从多条候选文案中随机选取，降低重复感
-- 三种解说风格：**电竞解说** / **动物世界** / **冷面吐槽**
-- 设置页：启用开关、风格选择、字幕时长、出现频率、极轻提示音（默认关闭）、
+- 实时推送：安装包版使用 **SSE 常驻连接**（零延迟，自动重连），`/poll` 每 8s 兜底
+- 设置页：启用开关、人物选择、字幕时长、出现频率、极轻提示音（默认关闭）、
   无障碍播报开关、预览字幕、恢复默认设置；设置保存在浏览器本地（localStorage）
 - 支持 `prefers-reduced-motion`；字幕使用 `aria-live="polite"`（可关闭）
 
@@ -105,25 +111,29 @@ pnpm add <dsh-commentator 仓库路径>
 | Host 事件 | 载荷（仅使用字段） | 解说 |
 | --- | --- | --- |
 | `agent/status` | `{ agent.id, status }` | `running` → 开始思考；`idle` 且有活动 → 任务完成 |
-| `tools/execute`（waterfall） | `{ name, agent.id }` | 工具调用开始（按工具名分类） |
-| `tools/result` | `{ name, isError }` | 成功 / 失败 |
+| `tools/execute`（waterfall） | `{ name, agent.id }` | 工具调用开始（按工具名分类）；首个工具延迟 >12s 时先播报"思考过久" |
+| `tools/result` | `{ name, isError }` | 成功 / 失败；连击 3/5/8、连败 2/4 时改为播报里程碑 |
 | `approval/request`（waterfall） | `{ agent.id, toolName }` | 等待用户批准 |
+| `subagent/start` | `{ id }` | 子代理登场 |
+| `subagent/end` | `{ id, stopReason }` | 子代理退场（完成 / 出错） |
 
 ## 架构
 
 ```
 ┌─ Host（Node 进程）──────────────────────────────┐
-│  ctx.on(agent/status | tools/* | approval/*)     │
+│  ctx.on(agent/status | tools/* | approval/*      │
+│        | subagent/start | subagent/end)          │
 │    → 过滤：仅当前会话 Agent 树（含子代理）         │
-│    → 最小事件 { t, tool } → 环形缓冲             │
-│  GET /dsh-commentator/poll?session=<id>（轮询）  │
+│    → 最小事件 { t, tool, n?, ok? } → 环形缓冲      │
+│  SSE: /dsh-commentator/stream?session=<id>       │
+│  兜底: /dsh-commentator/poll?session=<id>        │
 └────────────────────┬─────────────────────────────┘
-                     │ 同源 HTTP（仅事件类型）
+                     │ 同源 SSE（实时）/ 短轮询（兜底）
 ┌────────────────────▼─────────────────────────────┐
 │ 浏览器端（ModuleLoader bundle）                    │
 │  CaptionBar（shell.overlay，右下角，点击穿透）      │
-│  SettingsSection（settings.section，设置页）       │
-│  节流 + 优先级 + 随机文案 + 淡出 + 可选提示音        │
+│  SettingsSection（settings.section，人物卡设置）   │
+│  节流 + 优先级 + 随机文案 + 人物口头禅 + 淡出 + 提示音│
 └──────────────────────────────────────────────────┘
 ```
 
@@ -142,9 +152,10 @@ pnpm add <本目录>
 
 - 只有 Web GUI 有字幕输出；headless/TUI 无浏览器端。
 - 解说跟随「当前会话的 Agent 及其子代理」；其它会话的事件不会被显示（不会串台）。
-- 轮询间隔 700ms，字幕相对事件有 ≤1s 延迟（换取了零常驻连接与零依赖）。
+- 安装包版字幕通过 SSE 实时推送（零延迟），`/poll` 每 8s 兜底一次防止漏事件。
 - 审批解说只在审批策略为 `ask`（需要人工批准）时出现；策略为 `never`/`allow` 时
   该事件不会产生。
+- 连击/连败里程碑只在同一会话连续成功/失败时触发；中途插入其它工具结果会重置计数。
 
 ## License
 
