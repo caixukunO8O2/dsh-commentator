@@ -1,0 +1,39 @@
+{
+  "name": "dsh-commentator",
+  "version": "0.1.0",
+  "description": "Agent 体育解说员 — 一个为 DeepSeek Harness Web GUI 开发的轻量娱乐插件：监听真实发生的 Agent 状态与工具调用事件，用规则生成简短有趣的实时解说字幕。不调用大模型、不产生额外 Token 费用、不读取任何对话或命令内容。",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "entertainment",
+    "commentary",
+    "cordis"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
